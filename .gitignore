@@ -44,3 +44,4 @@ praw.ini
 *.csv
 requirements.txt
 requirements.txt_OLD
+banlist.py
