@@ -6,6 +6,12 @@
 #
 # Bot to convert between metric & imperial units on demand.
 
+# TODO: Parse called comment
+#   - Scan for obvious mentions of units
+#   - Scan for 'x unit in unit2' form
+#   - Scan for 'x in unit2 form' and then scan backward from there to find another unit to convert from.
+# TODO: Scan parent comment for same
+
 import logging
 
 import praw
