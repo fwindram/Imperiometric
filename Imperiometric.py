@@ -16,6 +16,8 @@ import logging
 
 import praw
 from prawcore import exceptions
+import imconvert
+from pprint import pprint
 
 # Set up logging
 # logging.basicConfig(level=logging.INFO)
@@ -23,8 +25,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # Create logfile handler
-handler = logging.FileHandler('log/SSCHED.out')
-handler.setLevel(logging.INFO)  # File logging level
+handler = logging.FileHandler('log/imperiometric.out')
+handler.setLevel(logging.DEBUG)  # File logging level
 
 # Create formatter and add to handler
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(message)s')
@@ -41,5 +43,5 @@ try:
     from banlist import banlist
 except ImportError:
     logger.debug('No banlist present.')
-
+    banlist = []
 
