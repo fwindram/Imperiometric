@@ -9,9 +9,9 @@
 
 from allowed_units import allowed_units
 from collections import namedtuple
+from unit_conversions import *
 
 import logging
-#convert_logger = logging.getLogger(__name__)     # May not work. We'll see?
 
 # Set up logging
 # logging.basicConfig(level=logging.INFO)
@@ -30,6 +30,7 @@ handler.setFormatter(formatter)
 convert_logger.addHandler(handler)
 
 
+# Exception classes
 class UnitError(Exception):
     """Raised when a source unit is not correctly defined."""
     pass
@@ -45,73 +46,54 @@ class UnitIdentityError(Exception):
     pass
 
 
-def length_convert(srcamt, srcunit, dstunit, default=True):
-    """Convert length from one unit to another."""
+def unit_convert(srcamt, srcunit, dstunit, convert_dict_metric, convert_dict_imperial, default=True):
+    """Convert measure from one unit to another."""
+    # TODO: Add the rest of the conversions to unit_conversions.py
     dstamnt = 0
-    convert_dict_metric = {
-        # unit: (default_multiplier, base_unit_multiplier)
-        # default_multiplier:   Amount to multiply by to get the default conversion
-        # base_unit_multiplier: Amount to multiply by to get the base unit (Often the SI unit)
-        "km": (0.6214, 1000),
-        "m": (1.094, 1),    # BASE UNIT
-        "cm": (0.3937, 0.01),
-        "mm": (0.03937, 0.001),
-        "µm": (0.00003937, 0.000001),
-        "base": (39.37, 1)  # base <-> base converter
-    }
-    convert_dict_imperial = {
-        "mile": (1.609, 63360),
-        "yd": (0.9144, 36),
-        "ft": (0.3048, 12),
-        'in': (0.0254, 1),      # BASE UNIT
-        "base": (0.0254, 1)  # base <-> base converter
-    }
 
+    # Determine used dicts
     if srcunit.scheme == 'Metric':
         srcunit_dict = convert_dict_metric
     else:
         srcunit_dict = convert_dict_imperial
+
     if dstunit.scheme == 'Metric':
         dstunit_dict = convert_dict_metric
     else:
         dstunit_dict = convert_dict_imperial
 
-    if default:
+    # Generate final multiplier
+    if default:                                 # Use default precalculated factor
         src_multiplier = srcunit_dict[srcunit.unit][0]
-    else:
-        src_multiplier = (srcunit_dict[srcunit.unit][1] * srcunit_dict["base"][0] / dstunit_dict[dstunit.unit][1])
+    elif srcunit.scheme == dstunit.scheme:      # Use base unit multipliers only
+        src_multiplier = srcunit_dict[srcunit.unit][1] / dstunit_dict[dstunit.unit][1]
+    else:                                       # Include base converter measure (to convert to other scheme)
+        src_multiplier = srcunit_dict[srcunit.unit][1] * srcunit_dict["base"][0] / dstunit_dict[dstunit.unit][1]
 
+    # Apply multiplier to srcamt
     dstamnt = srcamt * src_multiplier
 
+    # TODO: Sanify the returned unit where necessary to return the simplest unit possible if not specified.
+
     return dstamnt, dstunit.unit
-
-
-def mass_convert(srcamt, srcunit, dstunit, default=True):
-    """Convert mass from one unit to another."""
-    pass
-
-
-def volume_convert(srcamt, srcunit, dstunit, default=True):
-    """Convert volume from one unit to another."""
-    pass
-
-
-def area_convert(srcamt, srcunit, dstunit, default=True):
-    """Convert area from one unit to another."""
-    pass
 
 
 def convert(srcamt, source_unit, destination_unit=None):
     """Convert from source unit to equivalent in the other scheme.
     
-    :param srcamt: Amount to convert
+    :param srcamt: Amount to convert.
     :type srcamt: float
-    :param source_unit: Unit to convert from
+    :param source_unit: Unit to convert from.
     :type source_unit: str
-    :param destination_unit: Destination unit if given
+    :param destination_unit: Destination unit (optional).
     :type destination_unit: str
-    :return: (rtnamt, rtnunit)
-    :rtype: tuple"""
+    
+    :returns: (rtnamt, rtnunit)
+    :rtype: tuple
+    
+    :raises UnitError: When a source unit is not correctly defined.
+    :raises UnitMismatchError: When the source and destination units are not of the same type.
+    :raises UnitIdentityError: When the source and destination units are identical."""
 
     # TODO: Consider whether input needs preprocessing to deal with formats such as x lb y oz
 
@@ -131,6 +113,7 @@ def convert(srcamt, source_unit, destination_unit=None):
     else:
         raise UnitError
     convert_logger.debug("Source unit set to {}.".format(srcunit.fullname))
+
     using_default = True
     if destination_unit:
         using_default = False
@@ -161,17 +144,18 @@ def convert(srcamt, source_unit, destination_unit=None):
     if srcunit.unit == dstunit.unit:
         raise UnitIdentityError
 
-    # Call the required conversion
+    # Call the unit conversion
     # TODO: We could return a set of two tuples here, containing a primary unit + amt & a secondary one.
     # This would allow us to return things such as x lb y oz
+    final = ()
     if srcunit.unittype == "length":
-        final = length_convert(srcamt, srcunit, dstunit, using_default)
+        final = unit_convert(srcamt, srcunit, dstunit, length_idents_metric, length_idents_imperial, using_default)
     elif srcunit.unittype == "mass":
-        mass_convert(srcamt, srcunit, dstunit, using_default)
+        final = unit_convert(srcamt, srcunit, dstunit, mass_idents_metric, mass_idents_imperial, using_default)
     elif srcunit.unittype == "volume":
-        volume_convert(srcamt, srcunit, dstunit, using_default)
+        final = unit_convert(srcamt, srcunit, dstunit, volume_idents_metric, volume_idents_imperial, using_default)
     elif srcunit.unittype == "area":
-        area_convert(srcamt, srcunit, dstunit, using_default)
+        final = unit_convert(srcamt, srcunit, dstunit, area_idents_metric, area_idents_imperial, using_default)
     else:
         convert_logger.error("Source unit type '{}' is not valid! Check allowed_units entry for '{}'."
                              .format(srcunit.unittype, srcunit.unit)

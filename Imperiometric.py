@@ -45,3 +45,5 @@ except ImportError:
     logger.debug('No banlist present.')
     banlist = []
 
+output = imconvert.convert(1, 'm')
+pprint(output)
